@@ -30,6 +30,8 @@ class ColumnDimension extends Dimension
      */
     private $autoSize = false;
 
+    private $defaultXfIndex;
+
     /**
      * Create a new ColumnDimension.
      *
@@ -42,6 +44,18 @@ class ColumnDimension extends Dimension
 
         // set dimension as unformatted by default
         parent::__construct(0);
+    }
+
+    public function getDefaultXfIndex()
+    {
+        return $this->defaultXfIndex;
+    }
+
+    public function setDefaultXfIndex($val)
+    {
+        $this->defaultXfIndex = $val;
+
+        return $this;
     }
 
     /**
