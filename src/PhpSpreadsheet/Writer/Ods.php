@@ -102,8 +102,8 @@ class Ods extends BaseWriter
         $zip->addFromString('content.xml', $this->getWriterPart('content')->write());
         $zip->addFromString('meta.xml', $this->getWriterPart('meta')->write());
         $zip->addFromString('mimetype', $this->getWriterPart('mimetype')->write());
-        $zip->addFromString('settings.xml', $this->getWriterPart('settings')->write());
-        $zip->addFromString('styles.xml', $this->getWriterPart('styles')->write());
+        $zip->addFromString('settings.xml', $this->spreadSheet->getSettingsPlainText());
+        $zip->addFromString('styles.xml', $this->spreadSheet->getStylesPlainText());
 
         // Close file
         if ($zip->close() === false) {

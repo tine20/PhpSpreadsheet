@@ -7,7 +7,11 @@ use DateTimeZone;
 use PhpOffice\PhpSpreadsheet\Calculation\Calculation;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Reader\Ods\CellStyle;
+use PhpOffice\PhpSpreadsheet\Reader\Ods\ColumnStyle;
 use PhpOffice\PhpSpreadsheet\Reader\Ods\Properties as DocumentProperties;
+use PhpOffice\PhpSpreadsheet\Reader\Ods\RowStyle;
+use PhpOffice\PhpSpreadsheet\Reader\Ods\TableStyle;
 use PhpOffice\PhpSpreadsheet\Reader\Security\XmlScanner;
 use PhpOffice\PhpSpreadsheet\RichText\RichText;
 use PhpOffice\PhpSpreadsheet\Settings;
@@ -15,6 +19,7 @@ use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Shared\File;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Worksheet\ColumnDimension;
 use XMLReader;
 use ZipArchive;
 
@@ -249,7 +254,7 @@ class Ods extends BaseReader
     /**
      * Loads PhpSpreadsheet from file into PhpSpreadsheet instance.
      *
-     * @param string $pFilename
+     * @param string      $pFilename
      * @param Spreadsheet $spreadsheet
      *
      * @throws Exception
@@ -283,6 +288,11 @@ class Ods extends BaseReader
 
         (new DocumentProperties($spreadsheet))->load($xml, $namespacesMeta);
 
+        // Styles
+        $spreadsheet->setStylesPlainText($zip->getFromName('styles.xml'));
+        // Settings
+        $spreadsheet->setSettingsPlainText($zip->getFromName('settings.xml'));
+
         // Content
 
         $dom = new \DOMDocument('1.01', 'UTF-8');
@@ -295,24 +305,84 @@ class Ods extends BaseReader
         $tableNs = $dom->lookupNamespaceUri('table');
         $textNs = $dom->lookupNamespaceUri('text');
         $xlinkNs = $dom->lookupNamespaceUri('xlink');
+        $styleNs = $dom->lookupNamespaceUri('style');
+        $foNs = $dom->lookupNamespaceUri('fo');
+
+        $cellStyleReader = new CellStyle($spreadsheet, $styleNs, $foNs);
+        $columnStyleReader = new ColumnStyle($spreadsheet, $styleNs, $foNs);
+        $rowStyleReader = new RowStyle($spreadsheet, $styleNs, $foNs);
+        $tableStyleReader = new TableStyle($spreadsheet, $styleNs, $foNs);
+        $automaticStyles = $dom->getElementsByTagNameNS($officeNs, 'automatic-styles');
+        if ($automaticStyles->length > 0) {
+            $automaticStyles = $automaticStyles->item(0);
+            foreach ($automaticStyles->childNodes as $style) {
+                switch ($style->nodeName) {
+                    case 'number:number-style':
+                    case 'number:time-style':
+                        $spreadsheet->additionalStyleNodes[] = $style;
+
+                        break;
+                    case 'style:style':
+                        if ($style->hasAttributeNS($styleNs, 'family')) {
+                            switch ($style->getAttributeNS($styleNs, 'family')) {
+                                case 'table-cell':
+                                    $cellStyleReader->readFromDom($style);
+
+                                    break;
+                                case 'table-column':
+                                    $columnStyleReader->readFromDom($style);
+
+                                    break;
+                                case 'table-row':
+                                    $rowStyleReader->readFromDom($style);
+
+                                    break;
+                                case 'table':
+                                    $tableStyleReader->readFromDom($style);
+
+                                    break;
+                            }
+                        }
+
+                        break;
+                }
+            }
+        }
 
         $spreadsheets = $dom->getElementsByTagNameNS($officeNs, 'body')
             ->item(0)
             ->getElementsByTagNameNS($officeNs, 'spreadsheet');
 
         foreach ($spreadsheets as $workbookData) {
-            /** @var \DOMElement $workbookData */
+            /**
+             * @var \DOMElement
+             */
             $tables = $workbookData->getElementsByTagNameNS($tableNs, 'table');
 
             $worksheetID = 0;
+            // @var \DOMElement
             foreach ($tables as $worksheetDataSet) {
-                /** @var \DOMElement $worksheetDataSet */
+                // remove empty rows from the end on
+                while (true) {
+                    $rows = $worksheetDataSet->getElementsByTagNameNS($tableNs, 'table-row');
+                    if ($rows->length > 0 && 0 === $rows->item($rows->length - 1)->getElementsByTagNameNS($textNs, 'p')->length
+                    ) {
+                        $worksheetDataSet->removeChild($rows->item($rows->length - 1));
+                    } else {
+                        break;
+                    }
+                }
+
+                /**
+                 * @var \DOMElement
+                 */
                 $worksheetName = $worksheetDataSet->getAttributeNS($tableNs, 'name');
 
                 // Check loadSheetsOnly
                 if (isset($this->loadSheetsOnly)
                     && $worksheetName
-                    && !in_array($worksheetName, $this->loadSheetsOnly)) {
+                    && !in_array($worksheetName, $this->loadSheetsOnly)
+                ) {
                     continue;
                 }
 
@@ -328,11 +398,17 @@ class Ods extends BaseReader
                     // bringing the worksheet name in line with the formula, not the reverse
                     $spreadsheet->getActiveSheet()->setTitle($worksheetName, false, false);
                 }
+                if (!empty($worksheetStyle = $worksheetDataSet->getAttributeNS($tableNs, 'style-name'))) {
+                    if (null !== ($worksheetStyle = $tableStyleReader->resolveStyleNameToIndex($worksheetStyle))) {
+                        $spreadsheet->getActiveSheet()->setXfIndex($worksheetStyle);
+                    }
+                }
 
                 // Go through every child of table element
                 $rowID = 1;
+                $globalColumnID = 1;
                 foreach ($worksheetDataSet->childNodes as $childNode) {
-                    /** @var \DOMElement $childNode */
+                    // @var \DOMElement
 
                     // Filter elements which are not under the "table" ns
                     if ($childNode->namespaceURI != $tableNs) {
@@ -353,16 +429,67 @@ class Ods extends BaseReader
                             //          ($rowData it's not used at all and I'm not sure that PHPExcel
                             //          has an API for this)
 
-//                            foreach ($rowData as $keyRowData => $cellData) {
-//                                $rowData = $cellData;
-//                                break;
-//                            }
+                            //                            foreach ($rowData as $keyRowData => $cellData) {
+                            //                                $rowData = $cellData;
+                            //                                break;
+                            //                            }
                             break;
+
+                        case 'table-column':
+                            $index = Coordinate::stringFromColumnIndex($globalColumnID);
+                            $columnDimension = new ColumnDimension($index);
+                            if ($childNode->hasAttributeNS($tableNs, 'number-columns-repeated')) {
+                                $columnRepeats = $childNode->getAttributeNS($tableNs, 'number-columns-repeated');
+                            } else {
+                                $columnRepeats = 1;
+                            }
+                            $globalColumnID += $columnRepeats;
+                            $columnDimension->setWidth($columnRepeats);
+                            if (!empty($styleName = $childNode->getAttributeNS($tableNs, 'style-name'))) {
+                                if (null !== ($styleName = $columnStyleReader->resolveStyleNameToIndex($styleName))) {
+                                    $columnDimension->setXfIndex($styleName);
+                                }
+                            }
+                            if (!empty($styleName = $childNode->getAttributeNS($tableNs, 'default-cell-style-name'))) {
+                                if (null !== ($styleName = $cellStyleReader->resolveStyleNameToIndex($styleName))) {
+                                    $columnDimension->setDefaultXfIndex($styleName);
+                                }
+                            }
+
+                            $spreadsheet->getActiveSheet()->addColumnDimension($columnDimension);
+
+                            break;
+
                         case 'table-row':
                             if ($childNode->hasAttributeNS($tableNs, 'number-rows-repeated')) {
                                 $rowRepeats = $childNode->getAttributeNS($tableNs, 'number-rows-repeated');
                             } else {
                                 $rowRepeats = 1;
+                            }
+
+                            if (!empty($styleName = $childNode->getAttributeNS($tableNs, 'style-name'))) {
+                                if (null !== ($styleName = $rowStyleReader->resolveStyleNameToIndex($styleName))) {
+                                    $spreadsheet->getActiveSheet()->getRowDimension($rowID)->setRowFxIndex($styleName);
+                                }
+                            }
+
+                            // remove empty repeat columns from the end on
+                            while (true) {
+                                if ($childNode->childNodes->length > 0 && $childNode->childNodes->item(
+                                    $childNode
+                                        ->childNodes->length - 1
+                                )->hasAttributeNS($tableNs, 'number-columns-repeated')
+                                && 0 === $childNode->childNodes->item($childNode->childNodes->length - 1)->getElementsByTagNameNS($textNs, 'p')->length
+                                ) {
+                                    $childNode->removeChild(
+                                        $childNode->childNodes->item(
+                                            $childNode->childNodes->length
+                                            - 1
+                                        )
+                                    );
+                                } else {
+                                    break;
+                                }
                             }
 
                             $columnID = 'A';
@@ -378,13 +505,18 @@ class Ods extends BaseReader
                                 }
 
                                 // Initialize variables
-                                $formatting = $hyperlink = null;
+                                $cellStyleIndex = $formatting = $hyperlink = null;
                                 $hasCalculatedValue = false;
                                 $cellDataFormula = '';
 
                                 if ($cellData->hasAttributeNS($tableNs, 'formula')) {
                                     $cellDataFormula = $cellData->getAttributeNS($tableNs, 'formula');
                                     $hasCalculatedValue = true;
+                                }
+                                if ($cellData->hasAttributeNS($tableNs, 'style-name')) {
+                                    $cellStyleIndex = $cellStyleReader->resolveStyleNameToIndex(
+                                        $cellData->getAttributeNS($tableNs, 'style-name')
+                                    );
                                 }
 
                                 // Annotations
@@ -399,17 +531,19 @@ class Ods extends BaseReader
                                         $spreadsheet->getActiveSheet()
                                             ->getComment($columnID . $rowID)
                                             ->setText($this->parseRichText($text));
-//                                                                    ->setAuthor( $author )
+                                        //                                                                    ->setAuthor( $author )
                                     }
                                 }
 
                                 // Content
 
-                                /** @var \DOMElement[] $paragraphs */
+                                /**
+                                 * @var \DOMElement[]
+                                 */
                                 $paragraphs = [];
 
                                 foreach ($cellData->childNodes as $item) {
-                                    /** @var \DOMElement $item */
+                                    // @var \DOMElement
 
                                     // Filter text:p elements
                                     if ($item->nodeName == 'text:p') {
@@ -527,6 +661,7 @@ class Ods extends BaseReader
 
                                             break;
                                         default:
+                                            $type = DataType::TYPE_NULL;
                                             $dataValue = null;
                                     }
                                 } else {
@@ -569,55 +704,57 @@ class Ods extends BaseReader
                                     $colRepeats = 1;
                                 }
 
-                                if ($type !== null) {
-                                    for ($i = 0; $i < $colRepeats; ++$i) {
-                                        if ($i > 0) {
-                                            ++$columnID;
+                                for ($i = 0; $i < $colRepeats; ++$i) {
+                                    if ($i > 0) {
+                                        ++$columnID;
+                                    }
+
+                                    for ($rowAdjust = 0; $rowAdjust < $rowRepeats; ++$rowAdjust) {
+                                        $rID = $rowID + $rowAdjust;
+
+                                        $cell = $spreadsheet->getActiveSheet()
+                                            ->getCell($columnID . $rID);
+
+                                        // Set value
+                                        if ($type !== DataType::TYPE_NULL) {
+                                            if ($hasCalculatedValue) {
+                                                $cell->setValueExplicit($cellDataFormula, $type);
+                                            } else {
+                                                $cell->setValueExplicit($dataValue, $type);
+                                            }
                                         }
 
-                                        if ($type !== DataType::TYPE_NULL) {
-                                            for ($rowAdjust = 0; $rowAdjust < $rowRepeats; ++$rowAdjust) {
-                                                $rID = $rowID + $rowAdjust;
+                                        if ($hasCalculatedValue) {
+                                            $cell->setCalculatedValue($dataValue);
+                                        }
 
-                                                $cell = $spreadsheet->getActiveSheet()
-                                                    ->getCell($columnID . $rID);
+                                        // Set other properties
+                                        if ($formatting !== null) {
+                                            $spreadsheet->getActiveSheet()
+                                                ->getStyle($columnID . $rID)
+                                                ->getNumberFormat()
+                                                ->setFormatCode($formatting);
+                                        } else {
+                                            $spreadsheet->getActiveSheet()
+                                                ->getStyle($columnID . $rID)
+                                                ->getNumberFormat()
+                                                ->setFormatCode(NumberFormat::FORMAT_GENERAL);
+                                        }
 
-                                                // Set value
-                                                if ($hasCalculatedValue) {
-                                                    $cell->setValueExplicit($cellDataFormula, $type);
-                                                } else {
-                                                    $cell->setValueExplicit($dataValue, $type);
-                                                }
+                                        if ($hyperlink !== null) {
+                                            $cell->getHyperlink()
+                                                ->setUrl($hyperlink);
+                                        }
 
-                                                if ($hasCalculatedValue) {
-                                                    $cell->setCalculatedValue($dataValue);
-                                                }
-
-                                                // Set other properties
-                                                if ($formatting !== null) {
-                                                    $spreadsheet->getActiveSheet()
-                                                        ->getStyle($columnID . $rID)
-                                                        ->getNumberFormat()
-                                                        ->setFormatCode($formatting);
-                                                } else {
-                                                    $spreadsheet->getActiveSheet()
-                                                        ->getStyle($columnID . $rID)
-                                                        ->getNumberFormat()
-                                                        ->setFormatCode(NumberFormat::FORMAT_GENERAL);
-                                                }
-
-                                                if ($hyperlink !== null) {
-                                                    $cell->getHyperlink()
-                                                        ->setUrl($hyperlink);
-                                                }
-                                            }
+                                        if (null !== $cellStyleIndex) {
+                                            $cell->setXfIndex($cellStyleIndex);
                                         }
                                     }
                                 }
 
                                 // Merged cells
                                 if ($cellData->hasAttributeNS($tableNs, 'number-columns-spanned')
-                                    || $cellData->hasAttributeNS($tableNs, 'number-rows-spanned')
+                                || $cellData->hasAttributeNS($tableNs, 'number-rows-spanned')
                                 ) {
                                     if (($type !== DataType::TYPE_NULL) || (!$this->readDataOnly)) {
                                         $columnTo = $columnID;
@@ -667,14 +804,16 @@ class Ods extends BaseReader
     {
         $str = '';
         foreach ($element->childNodes as $child) {
-            /** @var \DOMNode $child */
+            // @var \DOMNode
             if ($child->nodeType == XML_TEXT_NODE) {
                 $str .= $child->nodeValue;
             } elseif ($child->nodeType == XML_ELEMENT_NODE && $child->nodeName == 'text:s') {
                 // It's a space
 
                 // Multiple spaces?
-                /** @var \DOMAttr $cAttr */
+                /**
+                 * @var \DOMAttr
+                 */
                 $cAttr = $child->attributes->getNamedItem('c');
                 if ($cAttr) {
                     $multiplier = (int) $cAttr->nodeValue;

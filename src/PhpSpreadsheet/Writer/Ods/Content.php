@@ -7,8 +7,10 @@ use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Shared\XMLWriter;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Font;
+use PhpOffice\PhpSpreadsheet\Worksheet\ColumnDimension;
 use PhpOffice\PhpSpreadsheet\Worksheet\Row;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Writer\Exception;
@@ -16,18 +18,21 @@ use PhpOffice\PhpSpreadsheet\Writer\Ods;
 use PhpOffice\PhpSpreadsheet\Writer\Ods\Cell\Comment;
 
 /**
- * @category   PhpSpreadsheet
+ * @category PhpSpreadsheet
  *
  * @method Ods getParentWriter
  *
- * @copyright  Copyright (c) 2006 - 2015 PhpSpreadsheet (https://github.com/PHPOffice/PhpSpreadsheet)
- * @author     Alexander Pervakov <frost-nzcr4@jagmort.com>
+ * @copyright Copyright (c) 2006 - 2015 PhpSpreadsheet (https://github.com/PHPOffice/PhpSpreadsheet)
+ * @author    Alexander Pervakov <frost-nzcr4@jagmort.com>
  */
 class Content extends WriterPart
 {
     const NUMBER_COLS_REPEATED_MAX = 1024;
     const NUMBER_ROWS_REPEATED_MAX = 1048576;
     const CELL_STYLE_PREFIX = 'ce';
+    const COLUMN_STYLE_PREFIX = 'co';
+    const ROW_STYLE_PREFIX = 'ro';
+    const TABLE_STYLE_PREFIX = 'ta';
 
     /**
      * Write content.xml to XML format.
@@ -82,6 +87,7 @@ class Content extends WriterPart
         $objWriter->writeAttribute('xmlns:field', 'urn:openoffice:names:experimental:ooo-ms-interop:xmlns:field:1.0');
         $objWriter->writeAttribute('xmlns:formx', 'urn:openoffice:names:experimental:ooxml-odf-interop:xmlns:form:1.0');
         $objWriter->writeAttribute('xmlns:css3t', 'http://www.w3.org/TR/css3-text/');
+        $objWriter->writeAttribute('xmlns:loext', 'urn:org:documentfoundation:names:experimental:office:xmlns:loext:1.0');
         $objWriter->writeAttribute('office:version', '1.2');
 
         $objWriter->writeElement('office:scripts');
@@ -117,13 +123,56 @@ class Content extends WriterPart
 
         $sheetCount = $spreadsheet->getSheetCount();
         for ($i = 0; $i < $sheetCount; ++$i) {
+            $sheet = $spreadsheet->getSheet($i);
             $objWriter->startElement('table:table');
-            $objWriter->writeAttribute('table:name', $spreadsheet->getSheet($i)->getTitle());
+            $objWriter->writeAttribute('table:name', $sheet->getTitle());
+            if (null !== $sheet->getXfIndex() && isset($spreadsheet->getTableXfCollection()[$sheet->getXfIndex()])) {
+                $objWriter->writeAttribute('table:style-name', self::TABLE_STYLE_PREFIX . $sheet->getXfIndex());
+            }
             $objWriter->writeElement('office:forms');
-            $objWriter->startElement('table:table-column');
-            $objWriter->writeAttribute('table:number-columns-repeated', self::NUMBER_COLS_REPEATED_MAX);
+            if (empty($sheet->getColumnDimensionCollection())) {
+                $objWriter->startElement('table:table-column');
+                $objWriter->writeAttribute('table:number-columns-repeated', self::NUMBER_COLS_REPEATED_MAX);
+                $objWriter->endElement();
+            } else {
+                $this->writeColumns($objWriter, $sheet);
+            }
+            $this->writeRows($objWriter, $sheet);
             $objWriter->endElement();
-            $this->writeRows($objWriter, $spreadsheet->getSheet($i));
+        }
+    }
+
+    /**
+     * Write columns of the specified sheet.
+     *
+     * @param XMLWriter $objWriter
+     * @param Worksheet $sheet
+     */
+    private function writeColumns(XMLWriter $objWriter, Worksheet $sheet)
+    {
+        // @var ColumnDimension
+        foreach ($sheet->getColumnDimensionCollection() as $columnDimension) {
+            $objWriter->startElement('table:table-column');
+            if ($columnDimension->getWidth() > 1) {
+                $objWriter->writeAttribute('table:number-columns-repeated', $columnDimension->getWidth());
+            }
+
+            if (!empty($columnDimension->getXfIndex())) {
+                $objWriter->writeAttribute(
+                    'table:style-name',
+                    self::COLUMN_STYLE_PREFIX .
+                    $columnDimension->getXfIndex()
+                );
+            }
+
+            if (!empty($columnDimension->getDefaultXfIndex())) {
+                $objWriter->writeAttribute(
+                    'table:default-cell-style-name',
+                    self::CELL_STYLE_PREFIX .
+                    $columnDimension->getDefaultXfIndex()
+                );
+            }
+
             $objWriter->endElement();
         }
     }
@@ -139,12 +188,16 @@ class Content extends WriterPart
         $numberRowsRepeated = self::NUMBER_ROWS_REPEATED_MAX;
         $span_row = 0;
         $rows = $sheet->getRowIterator();
+        $lastRowFxIndex = null;
         while ($rows->valid()) {
             --$numberRowsRepeated;
             $row = $rows->current();
             if ($row->getCellIterator()->valid()) {
                 if ($span_row) {
                     $objWriter->startElement('table:table-row');
+                    if (null !== $lastRowFxIndex) {
+                        $objWriter->writeAttribute('table:style-name', self::ROW_STYLE_PREFIX . $lastRowFxIndex);
+                    }
                     if ($span_row > 1) {
                         $objWriter->writeAttribute('table:number-rows-repeated', $span_row);
                     }
@@ -155,6 +208,12 @@ class Content extends WriterPart
                     $span_row = 0;
                 }
                 $objWriter->startElement('table:table-row');
+
+                $rowDimension = $sheet->getRowDimension($row->getRowIndex());
+                if (null !== ($lastRowFxIndex = $rowDimension->getRowFxIndex())) {
+                    $objWriter->writeAttribute('table:style-name', self::ROW_STYLE_PREFIX . $lastRowFxIndex);
+                }
+
                 $this->writeCells($objWriter, $row);
                 $objWriter->endElement();
             } else {
@@ -168,7 +227,7 @@ class Content extends WriterPart
      * Write cells of the specified row.
      *
      * @param XMLWriter $objWriter
-     * @param Row $row
+     * @param Row       $row
      *
      * @throws Exception
      */
@@ -178,7 +237,9 @@ class Content extends WriterPart
         $prevColumn = -1;
         $cells = $row->getCellIterator();
         while ($cells->valid()) {
-            /** @var \PhpOffice\PhpSpreadsheet\Cell\Cell $cell */
+            /**
+             * @var \PhpOffice\PhpSpreadsheet\Cell\Cell
+             */
             $cell = $cells->current();
             $column = Coordinate::columnIndexFromString($cell->getColumn()) - 1;
 
@@ -259,8 +320,8 @@ class Content extends WriterPart
      * Write span.
      *
      * @param XMLWriter $objWriter
-     * @param int $curColumn
-     * @param int $prevColumn
+     * @param int       $curColumn
+     * @param int       $prevColumn
      */
     private function writeCellSpan(XMLWriter $objWriter, $curColumn, $prevColumn)
     {
@@ -277,91 +338,218 @@ class Content extends WriterPart
     /**
      * Write XF cell styles.
      *
-     * @param XMLWriter $writer
+     * @param XMLWriter   $writer
      * @param Spreadsheet $spreadsheet
      */
     private function writeXfStyles(XMLWriter $writer, Spreadsheet $spreadsheet)
     {
+        foreach ($spreadsheet->additionalStyleNodes as $elem) {
+            $writer->writeDomElement($elem);
+        }
+
+        foreach ($spreadsheet->getColumnXfCollection() as $style) {
+            $writer->startElement('style:style');
+            $writer->writeAttribute('style:name', self::COLUMN_STYLE_PREFIX . $style->getIndex());
+            $writer->writeAttribute('style:family', 'table-column');
+            $aData = $style->getAdditionalData();
+            if (isset($aData['style:data-style-name'])) {
+                $writer->writeAttribute('style:data-style-name', $aData['style:data-style-name']);
+                unset($aData['style:data-style-name']);
+            }
+
+            foreach ($aData as $element => $data) {
+                $writer->startElement($element);
+                foreach ($data as $attr => $val) {
+                    $writer->writeAttribute($attr, $val);
+                }
+                $writer->endElement();
+            }/*
+            $writer->startElement('style:table-column-properties');
+
+            $alignment = $style->getAlignment();
+            if (!empty($alignment->getBreakBefore())) {
+                $writer->writeAttribute('fo:break-before', $alignment->getBreakBefore());
+            }
+
+            if (!empty($alignment->getColumnWidth())) {
+                $writer->writeAttribute('style:column-width', $alignment->getColumnWidth());
+            }
+
+            $writer->endElement();*/
+            $writer->endElement(); // Close style:style
+        }
+
+        foreach ($spreadsheet->getTableXfCollection() as $style) {
+            $writer->startElement('style:style');
+            $writer->writeAttribute('style:name', self::TABLE_STYLE_PREFIX . $style->getIndex());
+            $writer->writeAttribute('style:family', 'table');
+            if ($style->getFill()->getFillType() !== \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_NONE) {
+                $writer->writeAttribute('style:master-page-name', $style->getFill()->getFillType());
+            }
+            $aData = $style->getAdditionalData();
+            if (isset($aData['style:data-style-name'])) {
+                $writer->writeAttribute('style:data-style-name', $aData['style:data-style-name']);
+                unset($aData['style:data-style-name']);
+            }
+
+            foreach ($aData as $element => $data) {
+                $writer->startElement($element);
+                foreach ($data as $attr => $val) {
+                    $writer->writeAttribute($attr, $val);
+                }
+                $writer->endElement();
+            }
+            $writer->endElement(); // Close style:style
+        }
+
+        foreach ($spreadsheet->getRowXfCollection() as $style) {
+            $writer->startElement('style:style');
+            $writer->writeAttribute('style:name', self::ROW_STYLE_PREFIX . $style->getIndex());
+            $writer->writeAttribute('style:family', 'table-row');
+            $aData = $style->getAdditionalData();
+            if (isset($aData['style:data-style-name'])) {
+                $writer->writeAttribute('style:data-style-name', $aData['style:data-style-name']);
+                unset($aData['style:data-style-name']);
+            }
+
+            foreach ($aData as $element => $data) {
+                $writer->startElement($element);
+                foreach ($data as $attr => $val) {
+                    $writer->writeAttribute($attr, $val);
+                }
+                $writer->endElement();
+            }/*
+
+            $writer->startElement('style:table-row-properties');
+            $alignment = $style->getAlignment();
+            if (!empty($alignment->getBreakBefore())) {
+                $writer->writeAttribute('fo:break-before', $alignment->getBreakBefore());
+            }
+
+            if (!empty($alignment->getRowHeight())) {
+                $writer->writeAttribute('style:row-height', $alignment->getRowHeight());
+            }
+
+            if (null !== $alignment->getUseOptimalRowHeight()) {
+                $writer->writeAttribute('style:use-optimal-row-height', $alignment->getUseOptimalRowHeight() ? 'true'
+                    : 'false');
+            }
+
+            $writer->endElement();*/
+            $writer->endElement(); // Close style:style
+        }
+
         foreach ($spreadsheet->getCellXfCollection() as $style) {
             $writer->startElement('style:style');
             $writer->writeAttribute('style:name', self::CELL_STYLE_PREFIX . $style->getIndex());
             $writer->writeAttribute('style:family', 'table-cell');
             $writer->writeAttribute('style:parent-style-name', 'Default');
-
-            // style:text-properties
-
-            // Font
-            $writer->startElement('style:text-properties');
-
-            $font = $style->getFont();
-
-            if ($font->getBold()) {
-                $writer->writeAttribute('fo:font-weight', 'bold');
-                $writer->writeAttribute('style:font-weight-complex', 'bold');
-                $writer->writeAttribute('style:font-weight-asian', 'bold');
+            $aData = $style->getAdditionalData();
+            if (isset($aData['style:data-style-name'])) {
+                $writer->writeAttribute('style:data-style-name', $aData['style:data-style-name']);
+                unset($aData['style:data-style-name']);
             }
 
-            if ($font->getItalic()) {
-                $writer->writeAttribute('fo:font-style', 'italic');
-            }
-
-            if ($color = $font->getColor()) {
-                $writer->writeAttribute('fo:color', sprintf('#%s', $color->getRGB()));
-            }
-
-            if ($family = $font->getName()) {
-                $writer->writeAttribute('fo:font-family', $family);
-            }
-
-            if ($size = $font->getSize()) {
-                $writer->writeAttribute('fo:font-size', sprintf('%.1Fpt', $size));
-            }
-
-            if ($font->getUnderline() && $font->getUnderline() != Font::UNDERLINE_NONE) {
-                $writer->writeAttribute('style:text-underline-style', 'solid');
-                $writer->writeAttribute('style:text-underline-width', 'auto');
-                $writer->writeAttribute('style:text-underline-color', 'font-color');
-
-                switch ($font->getUnderline()) {
-                    case Font::UNDERLINE_DOUBLE:
-                        $writer->writeAttribute('style:text-underline-type', 'double');
-
-                        break;
-                    case Font::UNDERLINE_SINGLE:
-                        $writer->writeAttribute('style:text-underline-type', 'single');
-
-                        break;
+            if (is_array($aData)) {
+                foreach ($aData as $element => $data) {
+                    $writer->startElement($element);
+                    foreach ($data as $attr => $val) {
+                        $writer->writeAttribute($attr, $val);
+                    }
+                    $writer->endElement();
                 }
-            }
+            } else {
+                // style:text-properties
 
-            $writer->endElement(); // Close style:text-properties
+                // Font
+                $writer->startElement('style:text-properties');
 
-            // style:table-cell-properties
+                $font = $style->getFont();
 
-            $writer->startElement('style:table-cell-properties');
-            $writer->writeAttribute('style:rotation-align', 'none');
-
-            // Fill
-            if ($fill = $style->getFill()) {
-                switch ($fill->getFillType()) {
-                    case Fill::FILL_SOLID:
-                        $writer->writeAttribute('fo:background-color', sprintf(
-                            '#%s',
-                            strtolower($fill->getStartColor()->getRGB())
-                        ));
-
-                        break;
-                    case Fill::FILL_GRADIENT_LINEAR:
-                    case Fill::FILL_GRADIENT_PATH:
-                        /// TODO :: To be implemented
-                        break;
-                    case Fill::FILL_NONE:
-                    default:
+                if ($font->getBold()) {
+                    $writer->writeAttribute('fo:font-weight', 'bold');
+                    $writer->writeAttribute('style:font-weight-complex', 'bold');
+                    $writer->writeAttribute('style:font-weight-asian', 'bold');
                 }
+
+                if ($font->getItalic()) {
+                    $writer->writeAttribute('fo:font-style', 'italic');
+                }
+
+                if ($color = $font->getColor()) {
+                    $writer->writeAttribute('fo:color', sprintf('#%s', $color->getRGB()));
+                }
+
+                if ($family = $font->getName()) {
+                    $writer->writeAttribute('style:font-family', $family);
+                }
+
+                if ($size = $font->getSize()) {
+                    $writer->writeAttribute('fo:font-size', sprintf('%.1Fpt', $size));
+                }
+
+                if ($font->getUnderline() && $font->getUnderline() != Font::UNDERLINE_NONE) {
+                    $writer->writeAttribute('style:text-underline-style', 'solid');
+                    $writer->writeAttribute('style:text-underline-width', 'auto');
+                    $writer->writeAttribute('style:text-underline-color', 'font-color');
+
+                    switch ($font->getUnderline()) {
+                        case Font::UNDERLINE_DOUBLE:
+                            $writer->writeAttribute('style:text-underline-type', 'double');
+
+                            break;
+                        case Font::UNDERLINE_SINGLE:
+                            $writer->writeAttribute('style:text-underline-type', 'single');
+
+                            break;
+                    }
+                }
+
+                $writer->endElement(); // Close style:text-properties
+
+                // style:table-cell-properties
+
+                $writer->startElement('style:table-cell-properties');
+                $writer->writeAttribute('style:rotation-align', 'none');
+
+                // Fill
+                if ($fill = $style->getFill()) {
+                    switch ($fill->getFillType()) {
+                        case Fill::FILL_SOLID:
+                            $writer->writeAttribute(
+                                'fo:background-color',
+                                sprintf(
+                                    '#%s',
+                                    strtolower($fill->getStartColor()->getRGB())
+                                )
+                            );
+
+                            break;
+                        case Fill::FILL_GRADIENT_LINEAR:
+                        case Fill::FILL_GRADIENT_PATH:
+                            /// TODO :: To be implemented
+                            break;
+                        case Fill::FILL_NONE:
+                        default:
+                    }
+                }
+
+                // Borders
+                if ($borders = $style->getBorders()) {
+                    foreach (['getBottom' => 'bottom', 'getLeft' => 'left', 'getTop' => 'top', 'getRight' => 'right'] as $func => $align) {
+                        // @var Border
+                        if (($border = $borders->{$func}()) && $border->getBorderStyle() !== Border::BORDER_NONE) {
+                            $writer->writeAttribute(
+                                'fo:border-' . $align,
+                                $border->getSize() . 'pt ' .
+                                $border->getBorderStyle() . ' #' . $border->getColor()->getARGB()
+                            );
+                        }
+                    }
+                }
+
+                $writer->endElement(); // Close style:table-cell-properties
             }
-
-            $writer->endElement(); // Close style:table-cell-properties
-
             // End
 
             $writer->endElement(); // Close style:style
@@ -372,7 +560,7 @@ class Content extends WriterPart
      * Write attributes for merged cell.
      *
      * @param XMLWriter $objWriter
-     * @param Cell $cell
+     * @param Cell      $cell
      *
      * @throws \PhpOffice\PhpSpreadsheet\Exception
      */

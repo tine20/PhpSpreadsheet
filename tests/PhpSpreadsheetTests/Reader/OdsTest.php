@@ -151,20 +151,6 @@ class OdsTest extends TestCase
         self::assertEquals(20, $firstSheet->getCell('A5')->getValue());
     }
 
-    public function testReadColors()
-    {
-        $spreadsheet = $this->loadOdsTestFile();
-        $firstSheet = $spreadsheet->getSheet(0);
-
-        // Background color
-
-        $style = $firstSheet->getCell('K3')->getStyle();
-
-        self::assertEquals('none', $style->getFill()->getFillType());
-        self::assertEquals('FFFFFFFF', $style->getFill()->getStartColor()->getARGB());
-        self::assertEquals('FF000000', $style->getFill()->getEndColor()->getARGB());
-    }
-
     public function testReadRichText()
     {
         $spreadsheet = $this->loadOdsTestFile();
@@ -204,7 +190,7 @@ class OdsTest extends TestCase
 
     public function testReadBoldItalicUnderline()
     {
-        $this->markTestIncomplete('Features not implemented yet');
+        //$this->markTestIncomplete('Features not implemented yet');
 
         $spreadsheet = $this->loadOdsTestFile();
         $firstSheet = $spreadsheet->getSheet(0);
@@ -212,16 +198,20 @@ class OdsTest extends TestCase
         // Font styles
 
         $style = $firstSheet->getCell('A1')->getStyle();
-        self::assertEquals('FF000000', $style->getFont()->getColor()->getARGB());
+        self::assertEquals('ff0000', $style->getFont()->getColor()->getARGB());
         self::assertEquals(11, $style->getFont()->getSize());
         self::assertEquals(Font::UNDERLINE_NONE, $style->getFont()->getUnderline());
 
-        $style = $firstSheet->getCell('E3')->getStyle();
+        $style = $firstSheet->getCell('A3')->getStyle();
         self::assertEquals(Font::UNDERLINE_SINGLE, $style->getFont()->getUnderline());
+        self::assertEquals('000000', $style->getFont()->getColor()->getARGB());
 
         $style = $firstSheet->getCell('E1')->getStyle();
         self::assertTrue($style->getFont()->getBold());
         self::assertTrue($style->getFont()->getItalic());
+
+        $style = $firstSheet->getCell('K3')->getStyle();
+        self::assertSame('ff0000', $style->getFill()->getEndColor()->getARGB());
     }
 
     public function testLoadOdsWorkbookProperties()

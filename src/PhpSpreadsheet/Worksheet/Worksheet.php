@@ -51,6 +51,18 @@ class Worksheet implements IComparable
      */
     private static $invalidCharacters = ['*', ':', '/', '\\', '?', '[', ']'];
 
+    private $xfIndex;
+
+    public function setXfIndex($val)
+    {
+        $this->xfIndex = $val;
+    }
+
+    public function getXfIndex()
+    {
+        return $this->xfIndex;
+    }
+
     /**
      * Parent spreadsheet.
      *
@@ -531,6 +543,18 @@ class Worksheet implements IComparable
     public function getDefaultColumnDimension()
     {
         return $this->defaultColumnDimension;
+    }
+
+    private $columnDimensionCollection = [];
+
+    public function getColumnDimensionCollection()
+    {
+        return $this->columnDimensionCollection;
+    }
+
+    public function addColumnDimension(ColumnDimension $dimension)
+    {
+        $this->columnDimensionCollection[] = $dimension;
     }
 
     /**

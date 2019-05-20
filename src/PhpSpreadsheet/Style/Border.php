@@ -19,6 +19,7 @@ class Border extends Supervisor
     const BORDER_MEDIUMDASHDOTDOT = 'mediumDashDotDot';
     const BORDER_MEDIUMDASHED = 'mediumDashed';
     const BORDER_SLANTDASHDOT = 'slantDashDot';
+    const BORDER_SOLID = 'solid';
     const BORDER_THICK = 'thick';
     const BORDER_THIN = 'thin';
 
@@ -35,6 +36,13 @@ class Border extends Supervisor
      * @var Color
      */
     protected $color;
+
+    /**
+     * Border size.
+     *
+     * @var float
+     */
+    protected $size = 0.06;
 
     /**
      * @var int
@@ -140,6 +148,45 @@ class Border extends Supervisor
             if (isset($pStyles['color'])) {
                 $this->getColor()->applyFromArray($pStyles['color']);
             }
+            if (isset($pStyles['size'])) {
+                $this->setSize($pStyles['size']);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Get Size.
+     *
+     * @return float
+     */
+    public function getSize()
+    {
+        if ($this->isSupervisor) {
+            return $this->getSharedComponent()->getSize();
+        }
+
+        return $this->size;
+    }
+
+    /**
+     * Set Size.
+     *
+     * @param float $pValue
+     *
+     * @return Border
+     */
+    public function setSize($pValue)
+    {
+        if ($pValue == '') {
+            $pValue = 10;
+        }
+        if ($this->isSupervisor) {
+            $styleArray = $this->getStyleArray(['size' => $pValue]);
+            $this->getActiveSheet()->getStyle($this->getSelectedCells())->applyFromArray($styleArray);
+        } else {
+            $this->size = $pValue;
         }
 
         return $this;

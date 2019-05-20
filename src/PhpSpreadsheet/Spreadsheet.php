@@ -20,6 +20,32 @@ class Spreadsheet
         self::VISIBILITY_VERY_HIDDEN,
     ];
 
+    private $settingsPlainText;
+
+    public $additionalStyleNodes = [];
+
+    public function setSettingsPlainText($val)
+    {
+        $this->settingsPlainText = $val;
+    }
+
+    public function getSettingsPlainText()
+    {
+        return $this->settingsPlainText;
+    }
+
+    private $stylesPlainText;
+
+    public function setStylesPlainText($val)
+    {
+        $this->stylesPlainText = $val;
+    }
+
+    public function getStylesPlainText()
+    {
+        return $this->stylesPlainText;
+    }
+
     /**
      * Unique ID.
      *
@@ -82,6 +108,27 @@ class Spreadsheet
      * @var Style[]
      */
     private $cellXfCollection = [];
+
+    /**
+     * ColumnXf collection.
+     *
+     * @var Style[]
+     */
+    private $columnXfCollection = [];
+
+    /**
+     * RowXf collection.
+     *
+     * @var Style[]
+     */
+    private $rowXfCollection = [];
+
+    /**
+     * TableXf collection.
+     *
+     * @var Style[]
+     */
+    private $tableXfCollection = [];
 
     /**
      * CellStyleXf collection.
@@ -1081,6 +1128,69 @@ class Spreadsheet
     }
 
     /**
+     * Add a columnXf to the workbook.
+     *
+     * @param Style $style
+     */
+    public function addColumnXf(Style $style)
+    {
+        $this->columnXfCollection[] = $style;
+        $style->setIndex(count($this->columnXfCollection) - 1);
+    }
+
+    /**
+     * Get the workbook collection of columnXfs.
+     *
+     * @return Style[]
+     */
+    public function getColumnXfCollection()
+    {
+        return $this->columnXfCollection;
+    }
+
+    /**
+     * Get the workbook collection of rowXfs.
+     *
+     * @return Style[]
+     */
+    public function getRowXfCollection()
+    {
+        return $this->rowXfCollection;
+    }
+
+    /**
+     * Add a rowXf to the workbook.
+     *
+     * @param Style $style
+     */
+    public function addRowXf(Style $style)
+    {
+        $this->rowXfCollection[] = $style;
+        $style->setIndex(count($this->rowXfCollection) - 1);
+    }
+
+    /**
+     * Get the workbook collection of tableXfs.
+     *
+     * @return Style[]
+     */
+    public function getTableXfCollection()
+    {
+        return $this->tableXfCollection;
+    }
+
+    /**
+     * Add a tableXf to the workbook.
+     *
+     * @param Style $style
+     */
+    public function addTableXf(Style $style)
+    {
+        $this->tableXfCollection[] = $style;
+        $style->setIndex(count($this->tableXfCollection) - 1);
+    }
+
+    /**
      * Add a cellXf to the workbook.
      *
      * @param Style $style
@@ -1229,6 +1339,13 @@ class Spreadsheet
             foreach ($sheet->getColumnDimensions() as $columnDimension) {
                 ++$countReferencesCellXf[$columnDimension->getXfIndex()];
             }
+
+            // from column dimensions collection
+            foreach ($sheet->getColumnDimensionCollection() as $columnDimension) {
+                if (null !== $columnDimension->getXfIndex()) {
+                    ++$countReferencesCellXf[$columnDimension->getXfIndex()];
+                }
+            }
         }
 
         // remove cellXfs without references and create mapping so we can update xfIndex
@@ -1272,6 +1389,12 @@ class Spreadsheet
             // for all column dimensions
             foreach ($sheet->getColumnDimensions() as $columnDimension) {
                 $columnDimension->setXfIndex($map[$columnDimension->getXfIndex()]);
+            }
+
+            foreach ($sheet->getColumnDimensionCollection() as $columnDimension) {
+                if (null !== $columnDimension->getXfIndex()) {
+                    $columnDimension->setXfIndex($map[$columnDimension->getXfIndex()]);
+                }
             }
 
             // also do garbage collection for all the sheets

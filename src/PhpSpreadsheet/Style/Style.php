@@ -7,6 +7,20 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
 class Style extends Supervisor
 {
+    protected $additionalData;
+
+    public function getAdditionalData()
+    {
+        return $this->additionalData;
+    }
+
+    public function setAdditionalData($val)
+    {
+        $this->additionalData = $val;
+
+        return $this;
+    }
+
     /**
      * Font.
      *
