@@ -1,7 +1,16 @@
 {
     "name": "phpoffice/phpspreadsheet",
     "description": "PHPSpreadsheet - Read, Create and Write Spreadsheet documents in PHP - Spreadsheet engine",
-    "keywords": ["PHP", "OpenXML", "Excel", "xlsx", "xls", "ods", "gnumeric", "spreadsheet"],
+    "keywords": [
+        "PHP",
+        "OpenXML",
+        "Excel",
+        "xlsx",
+        "xls",
+        "ods",
+        "gnumeric",
+        "spreadsheet"
+    ],
     "homepage": "https://github.com/PHPOffice/PhpSpreadsheet",
     "type": "library",
     "license": "MIT",
@@ -63,7 +72,7 @@
         "jpgraph/jpgraph": "^4.0",
         "mpdf/mpdf": "^8.0",
         "phpcompatibility/php-compatibility": "^9.3",
-        "phpunit/phpunit": "^7.5",
+        "phpunit/phpunit": "^6",
         "squizlabs/php_codesniffer": "^3.5",
         "tecnickcom/tcpdf": "^6.3"
     },
@@ -81,6 +90,11 @@
     "autoload-dev": {
         "psr-4": {
             "PhpOffice\\PhpSpreadsheetTests\\": "tests/PhpSpreadsheetTests"
+        }
+    },
+    "config": {
+        "platform": {
+            "php": "7.0.8"
         }
     }
 }
