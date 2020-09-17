@@ -89,4 +89,28 @@ class XMLWriter extends \XMLWriter
 
         return $this->writeRaw(htmlspecialchars($text));
     }
+
+    public function writeDomElement(\DOMElement $elem)
+    {
+        $this->startElement($elem->nodeName);
+
+        if ($elem->hasAttributes()) {
+            /** @var \DomNode $node */
+            foreach ($elem->attributes as $node) {
+                $this->writeAttribute($node->nodeName, $node->nodeValue);
+            }
+        }
+
+        if ($elem->hasChildNodes()) {
+            foreach ($elem->childNodes as $elem) {
+                if ($elem instanceof \DOMElement) {
+                    $this->writeDomElement($elem);
+                } elseif ($elem instanceof  \DOMText) {
+                    $this->writeRawData($elem->nodeValue);
+                }
+            }
+        }
+
+        $this->endElement();
+    }
 }

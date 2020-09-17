@@ -95,4 +95,38 @@ class ContentTest extends TestCase
 
         self::assertXmlStringEqualsXmlFile($this->samplesPath . '/content-with-data.xml', $xml);
     }
+
+    public function testReadWrite()
+    {
+        $filename = __DIR__ . '/../../../../samples/templates/OOCalcTest.ods';
+
+        // Load into this instance
+        $reader = new \PhpOffice\PhpSpreadsheet\Reader\Ods();
+        \PhpOffice\PhpSpreadsheet\Settings::setLibXmlLoaderOptions(1);
+        $spreadsheet = $reader->loadIntoExisting($filename, new Spreadsheet());
+
+        $spreadsheet->garbageCollect();
+        $content = new Content(new Ods($spreadsheet));
+        $dom = new \DOMDocument('1.0', 'UTF-8');
+        self::assertTrue($dom->loadXML($content->write()));
+
+        $tableNs = $dom->lookupNamespaceUri('table');
+        $tableColumns = $dom->getElementsByTagNameNS($tableNs, 'table-column');
+        /** @var \DOMElement $element */
+        $element = $tableColumns->item(0);
+        self::assertTrue($element->hasAttributeNS($tableNs, 'style-name'));
+        self::assertTrue($element->hasAttributeNS($tableNs, 'default-cell-style-name'));
+        self::assertFalse($element->hasAttributeNS($tableNs, 'number-columns-repeated'));
+
+        /** @var \DOMElement $element */
+        $element = $tableColumns->item(1);
+        self::assertTrue($element->hasAttributeNS($tableNs, 'style-name'));
+        self::assertTrue($element->hasAttributeNS($tableNs, 'default-cell-style-name'));
+        self::assertTrue($element->hasAttributeNS($tableNs, 'number-columns-repeated'));
+
+        $tableRows = $dom->getElementsByTagNameNS($tableNs, 'table-row');
+        /** @var \DOMElement $element */
+        $element = $tableRows->item(1);
+        self::assertTrue($element->hasAttributeNS($tableNs, 'style-name'));
+    }
 }
