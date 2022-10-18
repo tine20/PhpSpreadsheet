@@ -32,6 +32,8 @@ class Alignment extends Supervisor
     const TEXTROTATION_STACK_EXCEL = 255;
     const TEXTROTATION_STACK_PHPSPREADSHEET = -165; // 90 - 255
 
+    const BREAK_BEFORE_AUTO = 'auto';
+
     /**
      * Horizontal alignment.
      *
@@ -45,6 +47,34 @@ class Alignment extends Supervisor
      * @var null|string
      */
     protected $vertical = self::VERTICAL_BOTTOM;
+
+    /**
+     * Break before.
+     *
+     * @var string
+     */
+    protected $breakBefore = self::BREAK_BEFORE_AUTO;
+
+    /**
+     * Column width.
+     *
+     * @var string
+     */
+    protected $columnWidth;
+
+    /**
+     * Row height.
+     *
+     * @var string
+     */
+    protected $rowHeight;
+
+    /**
+     * Use optimal row height.
+     *
+     * @var bool
+     */
+    protected $useOptimalRowHeight;
 
     /**
      * Text rotation.
@@ -173,6 +203,18 @@ class Alignment extends Supervisor
             }
             if (isset($styleArray['readOrder'])) {
                 $this->setReadOrder($styleArray['readOrder']);
+            }
+            if (isset($pStyles['breakBefore'])) {
+                $this->setBreakBefore($pStyles['breakBefore']);
+            }
+            if (isset($pStyles['columnWidth'])) {
+                $this->setColumnWidth($pStyles['columnWidth']);
+            }
+            if (isset($pStyles['rowHeight'])) {
+                $this->setRowHeight($pStyles['rowHeight']);
+            }
+            if (isset($pStyles['useOptimalRowHeight'])) {
+                $this->setUseOptimalRowHeight($pStyles['useOptimalRowHeight']);
             }
         }
 
@@ -423,6 +465,138 @@ class Alignment extends Supervisor
         }
 
         return $this->readOrder;
+    }
+
+    /**
+     * Get column width.
+     *
+     * @return string
+     */
+    public function getColumnWidth()
+    {
+        if ($this->isSupervisor) {
+            return $this->getSharedComponent()->getColumnWidth();
+        }
+
+        return $this->columnWidth;
+    }
+
+    /**
+     * Set column width.
+     *
+     * @param string $pValue
+     *
+     * @return Alignment
+     */
+    public function setColumnWidth($pValue)
+    {
+        if ($this->isSupervisor) {
+            $styleArray = $this->getStyleArray(['columnWidth' => $pValue]);
+            $this->getActiveSheet()->getStyle($this->getSelectedCells())->applyFromArray($styleArray);
+        } else {
+            $this->columnWidth = $pValue;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Get row height.
+     *
+     * @return string
+     */
+    public function getRowHeight()
+    {
+        if ($this->isSupervisor) {
+            return $this->getSharedComponent()->getRowHeight();
+        }
+
+        return $this->rowHeight;
+    }
+
+    /**
+     * Set row height.
+     *
+     * @param string $pValue
+     *
+     * @return Alignment
+     */
+    public function setRowHeight($pValue)
+    {
+        if ($this->isSupervisor) {
+            $styleArray = $this->getStyleArray(['rowHeight' => $pValue]);
+            $this->getActiveSheet()->getStyle($this->getSelectedCells())->applyFromArray($styleArray);
+        } else {
+            $this->rowHeight = $pValue;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Get use optimal row height.
+     *
+     * @return null|bool
+     */
+    public function getUseOptimalRowHeight()
+    {
+        if ($this->isSupervisor) {
+            return $this->getSharedComponent()->getUseOptimalRowHeight();
+        }
+
+        return $this->useOptimalRowHeight;
+    }
+
+    /**
+     * Set use optimal row height.
+     *
+     * @param null|bool $pValue
+     *
+     * @return Alignment
+     */
+    public function setUseOptimalRowHeight($pValue)
+    {
+        if ($this->isSupervisor) {
+            $styleArray = $this->getStyleArray(['useOptimalRowHeight' => $pValue]);
+            $this->getActiveSheet()->getStyle($this->getSelectedCells())->applyFromArray($styleArray);
+        } else {
+            $this->useOptimalRowHeight = $pValue;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Get break before.
+     *
+     * @return string
+     */
+    public function getBreakBefore()
+    {
+        if ($this->isSupervisor) {
+            return $this->getSharedComponent()->getBreakBefore();
+        }
+
+        return $this->breakBefore;
+    }
+
+    /**
+     * Set break before.
+     *
+     * @param string $pValue
+     *
+     * @return Alignment
+     */
+    public function setBreakBefore($pValue)
+    {
+        if ($this->isSupervisor) {
+            $styleArray = $this->getStyleArray(['breakBefore' => $pValue]);
+            $this->getActiveSheet()->getStyle($this->getSelectedCells())->applyFromArray($styleArray);
+        } else {
+            $this->breakBefore = $pValue;
+        }
+
+        return $this;
     }
 
     /**

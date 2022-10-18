@@ -13,6 +13,8 @@ class RowDimension extends Dimension
      */
     private $rowIndex;
 
+    private $rowXfIndex;
+
     /**
      * Row height (in pt).
      *
@@ -49,6 +51,18 @@ class RowDimension extends Dimension
     public function getRowIndex(): int
     {
         return $this->rowIndex;
+    }
+
+    public function setRowFxIndex($val)
+    {
+        $this->rowXfIndex = $val;
+
+        return $this;
+    }
+
+    public function getRowFxIndex()
+    {
+        return $this->rowXfIndex;
     }
 
     /**

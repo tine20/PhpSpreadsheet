@@ -133,11 +133,15 @@ class Ods extends BaseWriter
         $zip->addFile('META-INF/manifest.xml', $this->getWriterPartMetaInf()->write());
         $zip->addFile('Thumbnails/thumbnail.png', $this->getWriterPartthumbnails()->write());
         // Settings always need to be written before Content; Styles after Content
-        $zip->addFile('settings.xml', $this->getWriterPartsettings()->write());
+        if ($this->spreadSheet->getSettingsPlainText()) {
+            $zip->addFile('settings.xml', $this->spreadSheet->getSettingsPlainText());
+        }
         $zip->addFile('content.xml', $this->getWriterPartcontent()->write());
         $zip->addFile('meta.xml', $this->getWriterPartmeta()->write());
         $zip->addFile('mimetype', $this->getWriterPartmimetype()->write());
-        $zip->addFile('styles.xml', $this->getWriterPartstyles()->write());
+        if ($this->spreadSheet->getStylesPlainText()) {
+            $zip->addFile('styles.xml', $this->spreadSheet->getStylesPlainText());
+        }
 
         // Close file
         try {
