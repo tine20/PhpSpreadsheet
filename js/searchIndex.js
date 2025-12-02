@@ -23286,6 +23286,26 @@ Search.appendIndex(
             "summary": "",
             "url": "classes/PhpOffice-PhpSpreadsheet-Spreadsheet.html#method_getStylesPlainText"
         },                {
+            "fqsen": "\\PhpOffice\\PhpSpreadsheet\\Spreadsheet\u003A\u003AhasJsaMacros\u0028\u0029",
+            "name": "hasJsaMacros",
+            "summary": "",
+            "url": "classes/PhpOffice-PhpSpreadsheet-Spreadsheet.html#method_hasJsaMacros"
+        },                {
+            "fqsen": "\\PhpOffice\\PhpSpreadsheet\\Spreadsheet\u003A\u003AsetHasJsaMacros\u0028\u0029",
+            "name": "setHasJsaMacros",
+            "summary": "",
+            "url": "classes/PhpOffice-PhpSpreadsheet-Spreadsheet.html#method_setHasJsaMacros"
+        },                {
+            "fqsen": "\\PhpOffice\\PhpSpreadsheet\\Spreadsheet\u003A\u003AsetJsaCode\u0028\u0029",
+            "name": "setJsaCode",
+            "summary": "",
+            "url": "classes/PhpOffice-PhpSpreadsheet-Spreadsheet.html#method_setJsaCode"
+        },                {
+            "fqsen": "\\PhpOffice\\PhpSpreadsheet\\Spreadsheet\u003A\u003AgetJsaCode\u0028\u0029",
+            "name": "getJsaCode",
+            "summary": "",
+            "url": "classes/PhpOffice-PhpSpreadsheet-Spreadsheet.html#method_getJsaCode"
+        },                {
             "fqsen": "\\PhpOffice\\PhpSpreadsheet\\Spreadsheet\u003A\u003A\u0024hasMacros",
             "name": "hasMacros",
             "summary": "hasMacros\u0020\u003A\u0020this\u0020workbook\u0020have\u0020macros\u0020\u003F",
@@ -23945,6 +23965,16 @@ Search.appendIndex(
             "name": "tabRatio",
             "summary": "Specifies\u0020the\u0020ratio\u0020between\u0020the\u0020workbook\u0020tabs\u0020bar\u0020and\u0020the\u0020horizontal\nscroll\u0020bar.\u0020\u0020TabRatio\u0020is\u0020assumed\u0020to\u0020be\u0020out\u0020of\u00201000\u0020of\u0020the\u0020horizontal\nwindow\u0020width.",
             "url": "classes/PhpOffice-PhpSpreadsheet-Spreadsheet.html#property_tabRatio"
+        },                {
+            "fqsen": "\\PhpOffice\\PhpSpreadsheet\\Spreadsheet\u003A\u003A\u0024hasJSA",
+            "name": "hasJSA",
+            "summary": "",
+            "url": "classes/PhpOffice-PhpSpreadsheet-Spreadsheet.html#property_hasJSA"
+        },                {
+            "fqsen": "\\PhpOffice\\PhpSpreadsheet\\Spreadsheet\u003A\u003A\u0024jsaCode",
+            "name": "jsaCode",
+            "summary": "",
+            "url": "classes/PhpOffice-PhpSpreadsheet-Spreadsheet.html#property_jsaCode"
         },                {
             "fqsen": "\\PhpOffice\\PhpSpreadsheet\\Style\\Alignment",
             "name": "Alignment",
@@ -36350,6 +36380,11 @@ Search.appendIndex(
             "name": "writeDrawingHyperLink",
             "summary": "",
             "url": "classes/PhpOffice-PhpSpreadsheet-Writer-Xlsx-Rels.html#method_writeDrawingHyperLink"
+        },                {
+            "fqsen": "\\PhpOffice\\PhpSpreadsheet\\Writer\\Xlsx\\Rels\u003A\u003A\u0024keepOrgDrawingRelPath",
+            "name": "keepOrgDrawingRelPath",
+            "summary": "",
+            "url": "classes/PhpOffice-PhpSpreadsheet-Writer-Xlsx-Rels.html#property_keepOrgDrawingRelPath"
         },                {
             "fqsen": "\\PhpOffice\\PhpSpreadsheet\\Writer\\Xlsx\\RelsRibbon",
             "name": "RelsRibbon",
