@@ -10,6 +10,8 @@ use PhpOffice\PhpSpreadsheet\Writer\Exception as WriterException;
 
 class Rels extends WriterPart
 {
+    public static $keepOrgDrawingRelPath = false;
+
     /**
      * Write relationships to XML format.
      *
@@ -148,6 +150,17 @@ class Rels extends WriterPart
             );
             ++$i; //increment i if needed for an another relation
         }
+        // Relationships for jsaProject if needed
+        // id : just after the last sheet
+        if ($spreadsheet->hasJsaMacros()) {
+            $this->writeRelationShip(
+                $objWriter,
+                ($i + 1 + 3),
+                'http://schemas.onlyoffice.com/jsaProject',
+                'jsaProject.bin'
+            );
+            ++$i; //increment i if needed for an another relation
+        }
 
         $objWriter->endElement();
 
@@ -209,8 +222,10 @@ class Rels extends WriterPart
                 $rId = (int) (substr($drawingOriginalIds[$relPath], 3));
             }
 
-            // Generate new $relPath to write drawing relationship
-            $relPath = '../drawings/drawing' . $worksheetId . '.xml';
+            if (!static::$keepOrgDrawingRelPath) {
+                // Generate new $relPath to write drawing relationship
+                $relPath = '../drawings/drawing' . $worksheetId . '.xml';
+            }
             $this->writeRelationship(
                 $objWriter,
                 $rId,

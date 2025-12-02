@@ -246,6 +246,31 @@ class Spreadsheet
      */
     private $tabRatio = 600;
 
+    protected $hasJSA = false;
+
+    public function hasJsaMacros(): bool
+    {
+        return $this->hasJSA;
+    }
+
+    public function setHasJsaMacros(bool $hasJSA): void
+    {
+        $this->hasJSA = $hasJSA;
+    }
+
+    protected $jsaCode = null;
+
+    public function setJsaCode(?string $code): void
+    {
+        $this->jsaCode = $code;
+        $this->setHasJsaMacros(null !== $code);
+    }
+
+    public function getJsaCode(): ?string
+    {
+        return $this->jsaCode;
+    }
+
     /**
      * The workbook has macros ?
      *

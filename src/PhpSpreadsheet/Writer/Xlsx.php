@@ -346,6 +346,14 @@ class Xlsx extends BaseWriter
                 }
             }
         }
+        //if hasJsaMacros, add the vbaProject.bin file
+        if ($this->spreadSheet->hasJsaMacros()) {
+            $macrosCode = $this->spreadSheet->getJsaCode();
+            if ($macrosCode !== null) {
+                // we have the code
+                $zipContent['xl/jsaProject.bin'] = $macrosCode; //always in 'xl', always named jsaProject.bin
+            }
+        }
         //a custom UI in this workbook ? add it ("base" xml and additional objects (pictures) and rels)
         if ($this->spreadSheet->hasRibbon()) {
             $tmpRibbonTarget = $this->spreadSheet->getRibbonXMLData('target');

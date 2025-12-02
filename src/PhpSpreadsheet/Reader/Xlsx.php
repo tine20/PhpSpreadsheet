@@ -516,6 +516,7 @@ class Xlsx extends BaseReader
 
                     $worksheets = [];
                     $macros = $customUI = null;
+                    $jsa = false;
                     foreach ($relsWorkbook->Relationship as $elex) {
                         $ele = self::getAttributes($elex);
                         switch ($ele['Type']) {
@@ -533,11 +534,20 @@ class Xlsx extends BaseReader
                             // a vbaProject ? (: some macros)
                             case Namespaces::VBA:
                                 $macros = $ele['Target'];
+                                break;
 
+                            case 'http://schemas.onlyoffice.com/jsaProject':
+                                $jsa = true;
                                 break;
                         }
                     }
 
+                    if ($jsa) {
+                        $macrosCode = $this->getFromZipArchive($zip, 'xl/jsaProject.bin'); //vbaProject.bin always in 'xl' dir and always named vbaProject.bin
+                        if ($macrosCode !== false) {
+                            $excel->setJsaCode($macrosCode);
+                        }
+                    }
                     if ($macros !== null) {
                         $macrosCode = $this->getFromZipArchive($zip, 'xl/vbaProject.bin'); //vbaProject.bin always in 'xl' dir and always named vbaProject.bin
                         if ($macrosCode !== false) {
