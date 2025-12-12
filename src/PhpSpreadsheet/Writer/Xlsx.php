@@ -31,7 +31,6 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx\Workbook;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx\Worksheet;
 use ZipArchive;
 use ZipStream\Exception\OverflowException;
-use ZipStream\Option\Archive;
 use ZipStream\ZipStream;
 
 class Xlsx extends BaseWriter
@@ -546,11 +545,7 @@ class Xlsx extends BaseWriter
 
         $this->openFileHandle($filename);
 
-        $options = new Archive();
-        $options->setEnableZip64(false);
-        $options->setOutputStream($this->fileHandle);
-
-        $this->zip = new ZipStream(null, $options);
+        $this->zip = new ZipStream(enableZip64: false, outputStream: $this->fileHandle, sendHttpHeaders: false);
 
         $this->addZipFiles($zipContent);
 
