@@ -935,7 +935,7 @@ class ReferenceHelper
         $endColumnId = Coordinate::stringFromColumnIndex($beforeColumn);
 
         for ($row = 1; $row <= $highestRow - 1; ++$row) {
-            for ($column = $startColumnId; $column !== $endColumnId; ++$column) {
+            for ($column = $startColumnId; $column !== $endColumnId; $column = str_increment($column)) {
                 $coordinate = $column . $row;
                 $this->clearStripCell($worksheet, $coordinate);
             }
@@ -945,9 +945,9 @@ class ReferenceHelper
     private function clearRowStrips(string $highestColumn, int $beforeColumn, int $beforeRow, int $numberOfRows, Worksheet $worksheet): void
     {
         $startColumnId = Coordinate::stringFromColumnIndex($beforeColumn);
-        ++$highestColumn;
+        $highestColumn = str_increment($highestColumn);
 
-        for ($column = $startColumnId; $column !== $highestColumn; ++$column) {
+        for ($column = $startColumnId; $column !== $highestColumn; $column = str_increment($column)) {
             for ($row = $beforeRow + $numberOfRows; $row <= $beforeRow - 1; ++$row) {
                 $coordinate = $column . $row;
                 $this->clearStripCell($worksheet, $coordinate);
@@ -1041,8 +1041,8 @@ class ReferenceHelper
 
         do {
             $autoFilter->shiftColumn($startColID, $toColID);
-            ++$startColID;
-            ++$toColID;
+            $startColID = str_increment($startColID);
+            $toColID = str_increment($toColID);
         } while ($startColID !== $endColID);
     }
 
@@ -1120,8 +1120,8 @@ class ReferenceHelper
 
         do {
             $table->shiftColumn($startColID, $toColID);
-            ++$startColID;
-            ++$toColID;
+            $startColID = str_increment($startColID);
+            $toColID = str_increment($toColID);
         } while ($startColID !== $endColID);
     }
 

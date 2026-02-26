@@ -138,7 +138,7 @@ class Settings extends WriterPart
         $this->writeSplitValue($objWriter, 'PositionLeft', 'short', '0');
         $this->writeSplitValue($objWriter, 'PositionRight', 'short', (string) ($columnId - 1));
 
-        for ($column = 'A'; $column !== $columnName; ++$column) {
+        for ($column = 'A'; $column !== $columnName; $column = str_increment($column)) {
             $worksheet->getColumnDimension($column)->setAutoSize(true);
         }
 

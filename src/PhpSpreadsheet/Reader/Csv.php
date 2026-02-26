@@ -411,7 +411,7 @@ class Csv extends BaseReader
                     // Set cell value
                     $sheet->getCell($columnLetter . $outRow)->setValue($rowDatum);
                 }
-                ++$columnLetter;
+                $columnLetter = str_increment($columnLetter);
             }
             $rowData = fgetcsv($fileHandle, 0, $this->delimiter ?? '', $this->enclosure, $this->escapeCharacter);
             ++$currentRow;

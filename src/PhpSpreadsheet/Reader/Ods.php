@@ -501,7 +501,7 @@ class Ods extends BaseReader
                             foreach ($childNode->childNodes as $cellData) {
                                 if ($this->getReadFilter() !== null) {
                                     if (!$this->getReadFilter()->readCell($columnID, $rowID, $worksheetName)) {
-                                        ++$columnID;
+                                        $columnID = str_increment($columnID);
 
                                         continue;
                                     }
@@ -668,7 +668,7 @@ class Ods extends BaseReader
 
                                 for ($i = 0; $i < $colRepeats; ++$i) {
                                     if ($i > 0) {
-                                        ++$columnID;
+                                        $columnID = str_increment($columnID);
                                     }
 
                                     for ($rowAdjust = 0; $rowAdjust < $rowRepeats; ++$rowAdjust) {
@@ -717,7 +717,7 @@ class Ods extends BaseReader
                                 // Merged cells
                                 $this->processMergedCells($cellData, $tableNs, $type, $columnID, $rowID, $spreadsheet);
 
-                                ++$columnID;
+                                $columnID = str_increment($columnID);
                             }
                             $rowID += $rowRepeats;
 

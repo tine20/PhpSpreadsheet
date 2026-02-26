@@ -935,7 +935,7 @@ class Worksheet implements IComparable
         $this->title = $title;
         $this->dirty = true;
 
-        if ($this->parent && $this->parent->getCalculationEngine()) {
+        if (null !== $oldTitle && $this->parent && $this->parent->getCalculationEngine()) {
             // New title
             $newTitle = $this->getTitle();
             $this->parent->getCalculationEngine()
@@ -2836,7 +2836,7 @@ class Worksheet implements IComparable
                         $this->getCell($currentColumn . $startRow)->setValue($cellValue);
                     }
                 }
-                ++$currentColumn;
+                $currentColumn = str_increment($currentColumn);
             }
             ++$startRow;
         }
@@ -2864,17 +2864,16 @@ class Worksheet implements IComparable
         [$rangeStart, $rangeEnd] = Coordinate::rangeBoundaries($range);
         $minCol = Coordinate::stringFromColumnIndex($rangeStart[0]);
         $minRow = $rangeStart[1];
-        $maxCol = Coordinate::stringFromColumnIndex($rangeEnd[0]);
+        $maxCol = str_increment(Coordinate::stringFromColumnIndex($rangeEnd[0]));
         $maxRow = $rangeEnd[1];
 
-        ++$maxCol;
         // Loop through rows
         $r = -1;
         for ($row = $minRow; $row <= $maxRow; ++$row) {
             $rRef = $returnCellRef ? $row : ++$r;
             $c = -1;
             // Loop through columns in the current row
-            for ($col = $minCol; $col != $maxCol; ++$col) {
+            for ($col = $minCol; $col != $maxCol; $col = str_increment($col)) {
                 $cRef = $returnCellRef ? $col : ++$c;
                 //    Using getCell() will create a new cell if it doesn't already exist. We don't want that to happen
                 //        so we test and retrieve directly against cellCollection

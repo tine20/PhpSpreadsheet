@@ -319,7 +319,7 @@ class Xml extends BaseReader
                         $columnWidth = $columnData_ss['Width'];
                         $spreadsheet->getActiveSheet()->getColumnDimension($columnID)->setWidth($columnWidth / 5.4);
                     }
-                    ++$columnID;
+                    $columnID = str_increment($columnID);
                 }
             }
 
@@ -343,7 +343,7 @@ class Xml extends BaseReader
 
                         if ($this->getReadFilter() !== null) {
                             if (!$this->getReadFilter()->readCell($columnID, $rowID, $worksheetName)) {
-                                ++$columnID;
+                                $columnID = str_increment($columnID);
 
                                 continue;
                             }
@@ -448,9 +448,9 @@ class Xml extends BaseReader
                                     ->applyFromArray($this->styles[$style]);
                             }
                         }
-                        ++$columnID;
+                        $columnID = str_increment($columnID);
                         while ($additionalMergedCells > 0) {
-                            ++$columnID;
+                            $columnID = str_increment($columnID);
                             --$additionalMergedCells;
                         }
                     }
